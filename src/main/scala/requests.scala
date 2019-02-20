@@ -2,7 +2,7 @@ package webapp.db.postgrest
 
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import scala.concurrent.{ExecutionContext, Future}
-import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
+import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.{Result, Results}
 import play.api.http.Status._
 import play.api.libs.json.Json
