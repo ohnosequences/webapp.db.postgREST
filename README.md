@@ -15,15 +15,15 @@ where `x.y.z` is the version of the [latest release](https://github.com/ohnosequ
 
 ## How is this useful?
 
-Well, errors in single requests done with `WSClient` (you can have a laaaaarge number of them in a Scala Play project) get translated into errors of syntax doing the queries, or simply errors defining the endpoints addresses (e.g. declaring an endpoint as `Database.endpoint(host + "data")` instead of the correct `Database.endpoint(host + "datasets")`). On top of that, `.onFailure` and `.onSuccess` allow us to easily chain several requests and commands having control over the errors.
+Well, errors in single requests done with `WSClient` (you can have a laaaaarge number of them in a Scala Play project) get translated into errors of syntax doing the queries, or simply errors defining the endpoints addresses (e.g. declaring an endpoint as `Database.endpoint(host + "data")` instead of the correct `Database.endpoint(host + "datasets")`). On top of that, `.onFailure` and `.onSuccess` allow us to easily chain several requests and commands having control over the errors. Last but not least, it takes care of the escaping of arguments for the queries automatically.
 
-As illustration from a real project of ours, this is how a query to the database looked like before using this DSL (where `ws: WSClient`):
+As illustration from a real project of ours, this is how a query to the database looked like before using this DSL (where `ws: WSClient` and `escapeParameter` is some method which escapes reserved characters in http):
 
 ```scala
 ws.url(
   dbTable + 
-            "?" + "id" + "=eq." + s"${id}" +
-            "&" + "owner" + "=eq." + request.user
+            "?" + "id" + "=eq." + escapeParameter(s"${id})" +
+            "&" + "owner" + "=eq." + escapeParameter(request.user)
   )
   .addHttpHeaders(
     "Accept" -> "application/vnd.pgrst.object+json"
