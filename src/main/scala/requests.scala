@@ -7,6 +7,7 @@ import play.api.mvc.{Result, Results}
 import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.libs.ws.ahc.AhcWSRequest
+import HttpRequest.escapeParameter
 
 object Database {
   type HTTPMethod = WSRequest => Future[WSResponse]
@@ -21,7 +22,7 @@ object Database {
     this: Predicate =>
 
     def apply[T](col: Column, value: T): Query =
-      Query(col, operator ++ value.toString)
+      Query(escapeParameter(col), operator ++ escapeParameter(value.toString))
   }
 
   trait MultiPredicate {
@@ -49,8 +50,14 @@ object Database {
     final object like  extends Predicate("like.") with BinaryPredicate
     final object ilike extends Predicate("ilike.") with BinaryPredicate
     final object in extends Predicate("in.") {
-      def apply[T](col: Column, values: T*): Query =
-        Query(col, operator ++ "(" ++ values.mkString(",") ++ ")")
+      def apply[T](col: Column, values: T*): Query = {
+        val escaped = values.map { a =>
+          escapeParameter(a.toString)
+        }
+
+        Query(escapeParameter(col),
+              operator ++ "(" ++ escaped.mkString(",") ++ ")")
+      }
     }
     final object and extends Predicate("and") with MultiPredicate
     final object or  extends Predicate("or") with MultiPredicate
@@ -61,7 +68,9 @@ object Database {
     final object is extends Predicate("is.") {
       def apply(col: Column, value: Option[Boolean]): Query =
         // Substitutes None -> "null", Some(true) -> "true", Some(false) -> "false"
-        Query(col, operator ++ value.fold("null") { _.toString })
+        Query(escapeParameter(col), operator ++ value.fold("null") {
+          _.toString
+        })
     }
 
     type eq    = eq.type
