@@ -95,7 +95,20 @@ db.project
   )
 ```
 
-If we do not provide the where to the requests which accept it (`select`, `update`, `delete` and the logic deletion ones), then all the rows in that table would be affected.
+The implemented predicates are:
+* `eq`: tests for equality. It can be used as `eq("variable", "value")`.
+* `neq`: analogous to `eq` for testing inequality.
+* `lt`: tests for lower than. It can be used as `lt("variable", "value")`.
+* `gt`: tests for greater than. It can be used as `gt("variable", "value").
+* `lte`: tests for lower or equal than. It can be used as `lte("variable", "value").
+* `gte`: analogous to `lte` for greater or equal than.
+* `like` and `ilike` which are used to match regular expressions. They can be used as `like("variable", "regexp")`.
+* `and`: receives several predicates and tests that all of them are satisfied. It can be used as `and(eq("frodo", "hobbit"), lt("gollum", "hobbit"), gt("years", 324.toString))`.
+* `or`: receives several predicates and produces another predicate, testing that any of them are satisfied. It can be used as `or(eq("frodo", "hobbit"), lt("gollum", "hobbit"), gt("years", 324.toString))`.
+* `not: which negates a predicate (e.g. `not(or(eq("frodo", "hobbit"), lt("gollum", "hobbit")))`).
+* `is`: tests for exact equality. It can be used as `is("variable", None)` (which gets translated into `variable = NULL` in SQL), or `is(variable, Some(true))` (which gets translated into `variable = TRUE`) or `is(variable, Some(false))` (which gets translated into `variable = FALSE`).
+
+If we do not provide the `where` clause to the requests which accept it (`select`, `update`, `delete` and the logic deletion ones), then all the rows in that table would be affected.
 
 ### Select
 
@@ -143,6 +156,34 @@ db.users.select
   }
 ```
 
+## Insert
+```scala
+db.projects.insert(
+    "owner"        -> user,
+    "name"         -> bsProject.name,
+    "description"  -> bsProject.description,
+    "basespace_id" -> basespaceID,
+    "importing"    -> true
+  )
+  .onFailure { _ => InternalServerError }
+  .onSuccess { _ => Ok }
+```
+
+Note that `insert` receives a `(String, T)*` parameter, where `T` has to be something turnable into a `JsValue` (for `string`s, `number`s, `boolean`s, etc, it should work just fine). A `values: Seq[(String,String)]` could be provided also as an input, calling `db.projects.insert(values: _*)`. For more information about the `*` syntax, you can refer to [Alvin Alexander's post](https://alvinalexander.com/scala/how-to-define-methods-variable-arguments-varargs-fields) about it.
+
+## Update
+```scala
+db.projects
+  .update(
+    "importing" -> false,
+    "deleted" -> false
+  )
+  .where(
+    Pred.eq("id", s"$id")
+  )
+```
+
+The same comment about the `insert`'s input could be applied here.
 
 ## One controller to inject them all! ([*one ring to rule them all*](https://www.youtube.com/watch?v=qj139dE7tFI))
 
