@@ -1,6 +1,8 @@
-# webapp.db.postgREST
+# 0.1.0
 
-DSL to simplify requests to postgREST within Scala Play
+First release. Small DSL to simplify requests to postgREST within Scala Play.
+
+*This is a copy of the companion README*.
 
 ## Installation
 
