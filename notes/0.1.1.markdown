@@ -1,0 +1,5 @@
+# 0.1.1
+
+Patch for the first release: escapes values for the subqueries doing the http requests.
+
+The README for this version is [here](https://github.com/ohnosequences/webapp.db.postgREST/blob/9a82723d3a/README.md).
