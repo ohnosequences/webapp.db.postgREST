@@ -20,8 +20,8 @@ object Database {
   trait BinaryPredicate {
     this: Predicate =>
 
-    def apply(col: Column, value: Value): Query =
-      Query(col, operator ++ value)
+    def apply[T](col: Column, value: T): Query =
+      Query(col, operator ++ value.toString)
   }
 
   trait MultiPredicate {
@@ -49,7 +49,7 @@ object Database {
     final object like  extends Predicate("like.") with BinaryPredicate
     final object ilike extends Predicate("ilike.") with BinaryPredicate
     final object in extends Predicate("in.") {
-      def apply(col: Column, values: Value*): Query =
+      def apply[T](col: Column, values: T*): Query =
         Query(col, operator ++ "(" ++ values.mkString(",") ++ ")")
     }
     final object and extends Predicate("and") with MultiPredicate
@@ -258,7 +258,7 @@ object Database {
 
     case class Delete[A](
         val request: WSRequest,
-        val success: Set[Int] = Set(OK, NO_CONTENT),
+        val success: Set[Int] = Set(OK, ACCEPTED, NO_CONTENT),
         val callback: WSResponse => Future[A] = defaultCallback
     )(implicit val ec: ExecutionContext)
         extends Request[A, Delete](request, success, callback)

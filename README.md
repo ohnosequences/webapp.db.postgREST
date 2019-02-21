@@ -34,50 +34,50 @@ CREATE TABLE projects (
 );
 ```
 
-Let `endpoint` be a `Database.Endpoint` henceforth. All the requests return `Future`s. No matter what. `onFailure` and `onSuccess` methods always come in two flavors (`WSResponse` => Future[Result] ` and `WSResponse => Result`) but the result of the request to the endpoint will always be a `Future`. All the available methods need to be called in the following way (order matters):
+Let `endpoint` be a `Database.Endpoint` henceforth. All the requests return `Future`s. No matter what. `onFailure` and `onSuccess` methods always come in two flavors (`WSResponse` => Future[Result] ` and `WSResponse => Result`) but the result of the request to the endpoint will always be a `Future`. The syntax for a request is (order matters):
 
 ```scala
 type Result = Int
 val success: Result = 12345
 
 endpoint.{method}
-    .{modifier: setSuccess, failIfAlreadyExists, singular}
-    .{other modifier}
+  .{modifier: setSuccess, failIfAlreadyExists, singular}
+  .{other modifier}
+  ...
+  .where(
+    predicate,
+    other_predicate,
     ...
-    .where(
-        predicate,
-        other_predicate,
-        ...
-    )
-    // Note the onFailure has to be called always before the onSuccess
-    // If not provided explicitly, a default one which returns a Future[InternalServerError]
-    // is used
-    .onFailure { response =>
-        ...
-        myResult: Result = ...
-        myResult
-    }
-    .onSuccess { response =>
-        ...
-        success
-    }
+  )
+  // Note the onFailure has to be called always before the onSuccess
+  // If not provided explicitly, a default one which returns a 
+  // Future[InternalServerError] would be used
+  .onFailure { response =>
+    ...
+    myResult: Result = ...
+    myResult
+  }
+  .onSuccess { response =>
+    ...
+    success
+  }
 ```
 
 A few guidelines about the requests:
 
-* By default, `onFailure` returns a [`scala.play.mvc.Result`](https://www.playframework.com/documentation/2.6.x/api/scala/index.html#play.api.mvc.Results$). If we set `onFailure` to return something else, as in the above example, `onSuccess` has to return the same type of result.
+* By default, `onFailure` returns a [`scala.play.mvc.Result`](https://www.playframework.com/documentation/2.6.x/api/scala/index.html#play.api.mvc.Results$). If we set `onFailure` to return `Future[A]`, with `A` not being a `Result`, as in the above example, `onSuccess` has to return the same type.
 * When the `onSuccess` is called, the method is executed.
-* Instead of `onFailure`, we can call `debug`, which in case of failure would print the request and the response from the server.
+* Instead of `onFailure`, we can call `debug`, which would print the request and the response from the server in case of failure.
 * `setSuccess` can be used to redefine the meaning of a request success, passing a set of `Int`s which would mean success in that query. Everything but a success is considered a failure (and `onFailure` would be called for that request instead of `onSuccess`). By default, we comply with the [PostgREST error codes](http://postgrest.org/en/v5.2/api.html#http-status-codes):
   - `select` requests need to return a 200 (`OK`) to be considered successful.
-  - `insert` requests need to return a 200 (`OK`), 201 (`CREATED`), 409 (`CONFLICT`) to be considered successful. `CREATED` is what PostgREST returns in case the request is successful, `CONFLICT` is what it returns in case the primary key for the insertion already exists (the `failIfAlreadyExists` modifier removes the `CONFLICT` from the set of successful states for the insertion). `OK` is not going to be ever received, but just as a meaningful convention, we left it there.
+  - `insert` requests need to return a 200 (`OK`), 201 (`CREATED`), 409 (`CONFLICT`) to be considered successful. `CREATED` is what PostgREST returns in case the request is successful, `CONFLICT` is what it returns in case the primary key for the insertion already exists (the `failIfAlreadyExists` modifier removes the `CONFLICT` from the set of successful states for the insertion).
   - `update` requests need to receive an 200 (`OK`) or a 204 (`NO_CONTENT`) to be successful.
   - `delete` requests need to receive a 200 (`OK`), 202 (`ACCEPTED`) or 204 (NO_CONTENT).
   - `logicDeletion` and `undoDeletion` are an update (and therefore have the same success codes).
 
 ### `where` clause
 
-The `where` clause has to receive a comma separated list of predicates, where all the predicated are coded in `Database.Predicate` and comply with some of the operators listed [here](http://postgrest.org/en/v5.2/api.html#horizontal-filtering-rows):
+The `where` clause has to receive a comma separated list of predicates, where all the predicates are coded in `Database.Predicate` and comply with some of the operators listed [here](http://postgrest.org/en/v5.2/api.html#horizontal-filtering-rows):
 
 ```scala
 import ohnosequences.webapp.db.postgrest.Database
@@ -90,23 +90,24 @@ db.project
     importing -> true
   )
   .where(
-    Pred.eq("id", 132421.toString),
+    Pred.eq("id", 132421),
     Pred.like("name", "%ring%")
   )
 ```
 
 The implemented predicates are:
-* `eq`: tests for equality. It can be used as `eq("variable", "value")`.
+* `eq`: tests for equality. It can be used as `eq("variable", value)`.
 * `neq`: analogous to `eq` for testing inequality.
-* `lt`: tests for lower than. It can be used as `lt("variable", "value")`.
-* `gt`: tests for greater than. It can be used as `gt("variable", "value").
-* `lte`: tests for lower or equal than. It can be used as `lte("variable", "value").
+* `lt`: tests for lower than. It can be used as `lt("variable", value)`.
+* `gt`: tests for greater than. It can be used as `gt("variable", value).
+* `lte`: tests for lower or equal than. It can be used as `lte("variable", value).
 * `gte`: analogous to `lte` for greater or equal than.
 * `like` and `ilike` which are used to match regular expressions. They can be used as `like("variable", "regexp")`.
-* `and`: receives several predicates and tests that all of them are satisfied. It can be used as `and(eq("frodo", "hobbit"), lt("gollum", "hobbit"), gt("years", 324.toString))`.
-* `or`: receives several predicates and produces another predicate, testing that any of them are satisfied. It can be used as `or(eq("frodo", "hobbit"), lt("gollum", "hobbit"), gt("years", 324.toString))`.
+* `and`: receives several predicates and tests that all of them are satisfied. It can be used as `and(eq("frodo", "hobbit"), lt("gollum", "hobbit"), gt("years", 324))`.
+* `or`: receives several predicates and produces another predicate, testing that any of them are satisfied. It can be used as `or(eq("frodo", "hobbit"), lt("gollum", "hobbit"), gt("years", 324))`.
 * `not: which negates a predicate (e.g. `not(or(eq("frodo", "hobbit"), lt("gollum", "hobbit")))`).
 * `is`: tests for exact equality. It can be used as `is("variable", None)` (which gets translated into `variable = NULL` in SQL), or `is(variable, Some(true))` (which gets translated into `variable = TRUE`) or `is(variable, Some(false))` (which gets translated into `variable = FALSE`).
+* `in`: tests whether a variable value is contained in a list. All the values passed have to be turnable into `String` and of the same type: e.g. `in(4,5,6,8)`, `in("frodo", "gollum")`.
 
 If we do not provide the `where` clause to the requests which accept it (`select`, `update`, `delete` and the logic deletion ones), then all the rows in that table would be affected.
 
@@ -123,7 +124,7 @@ Examples:
 db.projects.select
   .columns("id", "name", "description", "deleted", "importing")
   .where(
-     Pred.eq("owner", request.user),
+     Pred.eq("owner", 1234),
      Pred.is("deleted", Some(false))
   )
   .onFailure { response =>
@@ -179,7 +180,7 @@ db.projects
     "deleted" -> false
   )
   .where(
-    Pred.eq("id", s"$id")
+    Pred.eq("id", id)
   )
 ```
 
