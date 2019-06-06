@@ -344,12 +344,14 @@ object Database {
     def insert(fields: (String, Json.JsValueWrapper)*): Insert[Result] =
       Insert(request, Json.obj(fields: _*))
 
-    // Bulk insert
-    def insert(values: JsArray): Insert[Result] =
+    def bulkInsert(values: JsArray): Insert[Result] =
       Insert(request, values)
 
     def update(fields: (String, Json.JsValueWrapper)*): Update[Result] =
       Update(request, Json.obj(fields: _*))
+
+    def bulkUpdate(values: JsArray): Insert[Result] =
+      Insert(request, values)
 
     def delete: Delete[Result] =
       Delete(request)
